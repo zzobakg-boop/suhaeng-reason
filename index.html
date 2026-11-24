@@ -1,0 +1,1036 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>수행평가 점수 확인</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="점수 확인">
+<style>
+/* 결재 서류 느낌: 푸른 잉크 + 인주색 포인트, 큰 터치 영역의 태블릿 도구 */
+:root{
+  --bg:#f3f5f8; --surface:#ffffff; --line:#d8dee7; --fg:#18222f; --muted:#5d6b7c;
+  --ink:#1f3a5f; --seal:#b8322a; --seal-soft:#f7e3e0; --ok:#2f7a4b; --ok-soft:#e1f1e7;
+  --warn:#9a6a12; --warn-soft:#fbf0d9; --paper:#ffffff; --pen:#111111;
+  --font:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11161d; --surface:#19212b; --line:#2c3846; --fg:#e6ebf1; --muted:#9aa8b8;
+  --ink:#8fb3e0; --seal:#e0685d; --seal-soft:#3a2220; --ok:#6cc391; --ok-soft:#1d3226;
+  --warn:#e2b45a; --warn-soft:#3a2f17; --paper:#ffffff; --pen:#111111; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11161d; --surface:#19212b; --line:#2c3846; --fg:#e6ebf1; --muted:#9aa8b8;
+  --ink:#8fb3e0; --seal:#e0685d; --seal-soft:#3a2220; --ok:#6cc391; --ok-soft:#1d3226;
+  --warn:#e2b45a; --warn-soft:#3a2f17; --paper:#ffffff; --pen:#111111; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--font);font-size:16px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:16px 40px;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+.wrap{max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1{font-size:1.45rem;margin:0;text-wrap:balance;letter-spacing:-0.01em}
+h2{font-size:1.1rem;margin:0 0 8px}
+p{margin:0}
+.muted{color:var(--muted)}
+.small{font-size:.88rem}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.brand{display:flex;align-items:center;gap:10px}
+.seal{width:30px;height:30px;border-radius:50%;border:2.5px solid var(--seal);color:var(--seal);display:grid;place-items:center;font-weight:700;font-size:.8rem;transform:rotate(-8deg);flex:none}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.between{justify-content:space-between}
+button,.btn{font:inherit;font-weight:600;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:10px 16px;cursor:pointer;min-height:44px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--ink);outline-offset:2px}
+button.primary{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+button.seal-btn{background:var(--seal);border-color:var(--seal);color:#fff}
+button.ghost{background:transparent}
+button.big{font-size:1.15rem;padding:14px 22px;min-height:56px}
+button:disabled{opacity:.45;cursor:not-allowed}
+input,select{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;min-height:40px;width:100%}
+label.field{display:flex;flex-direction:column;gap:4px;font-size:.9rem;color:var(--muted);min-width:0}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:32px 16px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center}
+.drop.over{border-color:var(--ink);background:var(--surface)}
+.notice{border-radius:8px;padding:10px 14px;font-size:.92rem}
+.notice.warn{background:var(--warn-soft);color:var(--warn)}
+.notice.err{background:var(--seal-soft);color:var(--seal)}
+.notice.ok{background:var(--ok-soft);color:var(--ok)}
+.guide{gap:14px}
+.guide h3{font-size:.95rem;margin:0 0 4px;color:var(--ink)}
+.guide ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px;font-size:.92rem;color:var(--muted)}
+.guide a{color:var(--ink);overflow-wrap:anywhere}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:.92rem}
+th,td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left;white-space:nowrap}
+th{background:var(--bg);font-weight:600;color:var(--muted);font-size:.82rem}
+td input{min-height:34px;padding:4px 6px;min-width:56px}
+td.nm input{min-width:84px}
+.x{min-height:34px;padding:4px 10px;color:var(--seal);border-color:transparent;background:transparent}
+.pv-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.pv{position:relative;width:100%;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#fff}
+.pv canvas{display:block;width:100%}
+.box{position:absolute;border:1.5px solid var(--seal);background:rgba(184,50,42,.08);pointer-events:none}
+.box span{position:absolute;left:2px;top:-1px;font-size:10px;color:var(--seal);font-weight:600;white-space:nowrap;line-height:1.2}
+.box img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.box.done{border-color:var(--ok);background:rgba(47,122,75,.08)}
+.adj{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.step{display:flex;align-items:center;gap:6px}
+.step button{min-height:38px;min-width:42px;padding:4px 8px}
+.step output{min-width:56px;text-align:center;font-variant-numeric:tabular-nums}
+details summary{cursor:pointer;font-weight:600}
+/* 학생 화면 */
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.progress{font-variant-numeric:tabular-nums;color:var(--muted)}
+.slist{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+.sbtn{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:14px;min-height:76px;text-align:left}
+.sbtn .no{font-size:.8rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.sbtn .nm{font-size:1.15rem}
+.sbtn.done{background:var(--ok-soft);border-color:var(--ok)}
+.sbtn.done .no::after{content:" · 서명 완료";color:var(--ok)}
+.center{min-height:60vh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;text-align:center}
+.who{font-size:2rem;font-weight:700;letter-spacing:-0.02em}
+.scores{display:flex;flex-direction:column}
+.sc{display:flex;justify-content:space-between;gap:12px;padding:12px 2px;border-bottom:1px solid var(--line);align-items:baseline}
+.sc:last-child{border-bottom:0}
+.sc .it{min-width:0;overflow-wrap:anywhere}
+.sc .val{font-variant-numeric:tabular-nums;white-space:nowrap;font-size:1.3rem;font-weight:700}
+.sc .val small{font-size:.95rem;color:var(--muted);font-weight:500}
+.padwrap{position:relative;background:var(--paper);border:2px solid var(--line);border-radius:10px;overflow:hidden}
+#pad{display:block;width:100%;height:260px;touch-action:none;cursor:crosshair}
+.padhint{position:absolute;left:0;right:0;bottom:44%;text-align:center;color:#9aa3ad;pointer-events:none;font-size:1.05rem}
+.baseline{position:absolute;left:8%;right:8%;bottom:28%;border-bottom:1.5px dashed #c6ccd3;pointer-events:none}
+.modal{position:fixed;inset:0;background:rgba(10,14,20,.55);display:grid;place-items:center;padding:16px;z-index:20}
+.modal .card{width:min(420px,100%)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(24px + env(safe-area-inset-bottom,0px));background:var(--ok);color:#fff;padding:12px 20px;border-radius:999px;font-weight:600;z-index:30}
+/* 이유 화면 */
+.rpart h2{margin:0}
+.rpart .val{font-variant-numeric:tabular-nums;white-space:nowrap;font-size:1.3rem;font-weight:700}
+.rpart .val small{font-size:.95rem;color:var(--muted);font-weight:500}
+.lvl{background:var(--bg);border-radius:8px;padding:10px 12px}
+.checks{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.checks li{display:flex;gap:10px;align-items:flex-start}
+.mk{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-weight:700;border:2px solid currentColor}
+.mk-o{color:var(--ok)} .mk-t{color:var(--warn)} .mk-x{color:var(--seal)}
+.next{border-left:4px solid var(--ink);padding:4px 0 4px 12px}
+.next ul{margin:4px 0 0;padding-left:1.1em}
+.tnote{color:var(--ink);font-weight:600}
+textarea{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%;min-height:90px}
+.tag{font-size:.8rem;border-radius:999px;padding:1px 8px;white-space:nowrap}
+.tag.ok{background:var(--ok-soft);color:var(--ok)} .tag.bad{background:var(--seal-soft);color:var(--seal)} .tag.ask{background:var(--warn-soft);color:var(--warn)}
+@media (prefers-reduced-motion:no-preference){.sbtn,button{transition:background .15s,border-color .15s}}
+</style>
+<script src="vendor/pdf.min.js"></script>
+<script src="vendor/pdf-lib.min.js"></script>
+</head>
+<body>
+<div class="wrap">
+
+<!-- 1. 시작 -->
+<section id="scr-start" hidden>
+  <div class="card">
+    <div class="brand"><div class="seal">확인</div><h1>수행평가 점수 확인과 서명</h1></div>
+    <p class="muted">나이스에서 내려받은 수행평가 일람표 PDF와 반별 이유 자료 파일을 올리면, 학생이 태블릿에서 자기 점수와 그 점수가 나온 이유를 읽고 서명합니다. 납득하지 못한 학생은 서명하지 않고 질문을 남깁니다. 서명은 각 학생의 비고란에 들어갑니다.</p>
+    <div id="kakao" class="notice warn" hidden>카카오톡 안에서 열면 진행 상황이 저장되지 않을 수 있습니다. 오른쪽 위 메뉴에서 "다른 브라우저로 열기"를 눌러 크롬이나 사파리로 열어 주세요.</div>
+    <div id="saved" hidden><h2>저장된 일람표</h2><div id="savedList" style="display:flex;flex-direction:column;gap:8px"></div></div>
+    <label class="drop" id="drop" for="file">
+      <strong>일람표 PDF 선택</strong>
+      <span class="muted small">파일을 끌어다 놓거나 눌러서 고르세요</span>
+      <input type="file" id="file" accept="application/pdf,.pdf" hidden>
+    </label>
+    <div id="startMsg"></div>
+    <p class="muted small">반별 일람표를 여러 개 올려 두고 골라서 이어 받을 수 있습니다.</p>
+    <div class="row"><button class="ghost" id="btnWipe">이 기기의 자료 모두 지우기</button><span id="wipeMsg" class="muted small"></span></div>
+  </div>
+  <div class="card guide" style="margin-top:16px">
+    <h2>쓰기 전에 읽어 주세요</h2>
+    <div class="gsec">
+      <h3>개인정보</h3>
+      <ul>
+        <li>학생 이름, 점수, 서명은 선생님 기기의 브라우저 안에만 저장되고 어디로도 전송되지 않습니다.</li>
+        <li>이 프로그램이 올라가 있는 깃허브에는 데이터를 저장할 서버나 데이터베이스 자체가 없습니다.</li>
+        <li>프로그램 코드는 모두 공개되어 있어 누구나 확인할 수 있습니다. <a href="https://github.com/zzobakg-boop/suhaeng-reason" target="_blank" rel="noopener">github.com/zzobakg-boop/suhaeng-reason</a></li>
+      </ul>
+    </div>
+    <div class="gsec">
+      <h3>저장과 이어 받기</h3>
+      <ul>
+        <li>이어서 받을 때는 처음 쓴 기기와 같은 브라우저로 열어 주세요. 다른 기기나 브라우저에서는 저장된 일람표가 보이지 않습니다.</li>
+        <li>아이폰·아이패드는 7일 동안 열지 않으면 저장된 내용이 지워질 수 있습니다. 사파리 공유 버튼에서 '홈 화면에 추가'를 눌러 아이콘으로 열어 주세요.</li>
+        <li>서명을 다 받은 반은 바로 'PDF 받기'로 내려받아 두세요.</li>
+      </ul>
+    </div>
+    <div class="gsec">
+      <h3>학교 규정과 확인</h3>
+      <ul>
+        <li>전자 서명을 학생 확인 서명으로 인정하는지는 학교 학업성적관리규정을 확인해 주세요.</li>
+        <li>개인이 만든 무료 프로그램입니다. 내려받은 PDF는 결재 전에 서명 위치와 점수를 한 번 확인하고 써 주세요.</li>
+        <li>이 도구는 국어 선생님의 수행평가 일람표 전자서명기(github.com/koreantch-stack/suhaengsign)를 고쳐 이유 화면을 더한 것입니다. 원 저작자가 "코드는 자유롭게 가져다 고쳐 쓰셔도 됩니다"라고 밝혀 두었습니다.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 2. 교사 확인 -->
+<section id="scr-review" hidden>
+  <div class="wrap" style="max-width:none">
+    <div class="topbar">
+      <div class="brand" style="flex:1;min-width:220px"><div class="seal">확인</div><input id="rvTitle" aria-label="일람표 이름" style="font-size:1.2rem;font-weight:700;background:transparent;border-color:transparent;padding-left:4px"></div>
+      <div class="row">
+        <button class="ghost" id="btnNew">일람표 목록</button>
+        <button class="primary big" id="btnStudent">학생 서명 시작</button>
+      </div>
+    </div>
+    <div id="rvMsg"></div>
+
+    <div class="card">
+      <div class="row between"><h2>비고란 위치</h2><span class="muted small">빨간 칸에 서명이 들어갑니다</span></div>
+      <div class="pv-head">
+        <button id="pvPrev" aria-label="이전 쪽">‹</button>
+        <span id="pvLabel" class="progress"></span>
+        <button id="pvNext" aria-label="다음 쪽">›</button>
+      </div>
+      <div class="pv" id="pv"><canvas id="pvCanvas"></canvas><div id="pvBoxes"></div></div>
+      <p class="muted small">칸이 어긋나면 아래에서 조정하세요. 모든 학생에게 똑같이 적용됩니다. 단위는 pt(약 0.35mm)입니다.</p>
+      <div class="adj">
+        <div class="step"><span class="small muted" style="width:76px">왼쪽 경계</span><button data-adj="l" data-d="-1">−</button><output id="o_l">0</output><button data-adj="l" data-d="1">+</button></div>
+        <div class="step"><span class="small muted" style="width:76px">오른쪽 경계</span><button data-adj="r" data-d="-1">−</button><output id="o_r">0</output><button data-adj="r" data-d="1">+</button></div>
+        <div class="step"><span class="small muted" style="width:76px">위아래 이동</span><button data-adj="dy" data-d="-1">↑</button><output id="o_dy">0</output><button data-adj="dy" data-d="1">↓</button></div>
+        <div class="step"><span class="small muted" style="width:76px">안쪽 여백</span><button data-adj="pad" data-d="-0.5">−</button><output id="o_pad">2</output><button data-adj="pad" data-d="0.5">+</button></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row between"><h2>평가 항목과 만점</h2><span class="muted small">학생 화면에 이 이름으로 보입니다</span></div>
+      <div class="tbl-wrap"><table><thead><tr><th>항목 이름</th><th>만점</th><th>학생에게 보이기</th></tr></thead><tbody id="itemBody"></tbody></table></div>
+      <p class="muted small">여기에서 항목 이름, 만점 점수를 수정할 수 있습니다.</p>
+    </div>
+
+    <div class="card" id="rsCard">
+      <div class="row between"><h2>이유 자료</h2><span class="muted small">학생 화면에 점수가 나온 이유를 보여 줍니다</span></div>
+      <div id="rsInfo"></div>
+      <div class="row"><label class="btn" for="rsFile">이유 자료 파일 올리기</label><input type="file" id="rsFile" accept=".json,application/json" hidden><button class="ghost" id="rsRemove" hidden>이유 자료 빼기</button></div>
+      <div id="rsMapWrap" hidden>
+        <h2 style="font-size:1rem">일람표 칸과 이유 자료 점수 맞추기</h2>
+        <div class="tbl-wrap"><table><thead><tr><th>일람표 항목</th><th>맞춰 볼 이유 자료 점수</th></tr></thead><tbody id="rsMap"></tbody></table></div>
+        <div id="rsCheck"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row between"><h2>학생 명단과 점수</h2><span class="muted small" id="stCount"></span></div>
+      <div class="tbl-wrap"><table><thead id="stHead"></thead><tbody id="stBody"></tbody></table></div>
+      <p class="muted small">잘못 인식된 줄(담임 서명란 등)은 오른쪽 ✕로 지우세요.</p>
+    </div>
+
+    <div class="card">
+      <h2>서명 넣은 PDF 받기</h2>
+      <div id="exportInfo" class="notice warn" hidden></div>
+      <label class="field">서명하지 않은 학생 비고란에 쓸 글자 (비워 두면 빈칸)
+        <input id="skipText" placeholder="예: 결석" maxlength="12"></label>
+      <div class="row"><button class="seal-btn big" id="btnExport">PDF 받기</button><button class="big" id="btnLog">확인 기록 받기</button><span id="exportMsg" class="muted small"></span></div>
+      <p class="muted small">확인 기록은 학생마다 이유를 본 시각, 서명 시각, 질문을 남긴 시각과 내용을 엑셀에서 열리는 표(CSV)로 담습니다. 이의 신청 기록과 함께 보관하세요.</p>
+    </div>
+
+    <div class="card">
+      <h2>교사 비밀번호</h2>
+      <p class="muted small">학생 서명을 시작하려면 숫자 4자리 이상이 꼭 필요합니다. 학생 화면에서 교사 화면으로 돌아올 때, 서명 중에 앱을 다시 열었을 때 묻습니다.</p>
+      <label class="field">숫자 4자리 이상<input id="pinSet" inputmode="numeric" maxlength="8" autocomplete="off"></label>
+    </div>
+
+  </div>
+</section>
+
+<!-- 3. 학생 명단 -->
+<section id="scr-list" hidden>
+  <div class="wrap" style="max-width:none">
+    <div class="topbar">
+      <div><h1>내 이름을 눌러 주세요</h1><span class="progress" id="listProg"></span></div>
+      <button class="ghost" id="btnTeacher">교사</button>
+    </div>
+    <div class="slist" id="slist"></div>
+  </div>
+</section>
+
+<!-- 4. 본인 확인 -->
+<section id="scr-confirm" hidden>
+  <div class="center">
+    <p class="muted">내 이름이 맞으면 내 번호를 숫자로 넣어 주세요.</p>
+    <div class="who" id="cfWho"></div>
+    <input id="cfNum" inputmode="numeric" autocomplete="off" aria-label="내 번호" style="max-width:200px;text-align:center;font-size:1.5rem">
+    <p id="cfErr" class="small" style="color:var(--seal)" hidden>번호가 맞지 않아요. 내 번호를 다시 넣어 주세요.</p>
+    <p id="cfNote" class="notice warn" hidden>이미 서명했습니다. 다시 서명하면 이전 서명이 바뀝니다.</p>
+    <div class="row" style="justify-content:center">
+      <button class="big" id="cfNo">아니요</button>
+      <button class="primary big" id="cfYes">확인</button>
+    </div>
+  </div>
+</section>
+
+<!-- 5. 점수 확인 + 서명 -->
+<section id="scr-sign" hidden>
+  <div class="wrap" style="max-width:760px">
+    <div class="topbar"><h1 id="sgWho"></h1><button class="ghost" id="sgCancel">취소</button></div>
+    <div id="sgBad" class="notice err" hidden></div>
+    <div id="sgReason" style="display:flex;flex-direction:column;gap:16px"></div>
+    <div class="card"><h2 id="sgScoresTitle">내 점수</h2><div class="scores" id="sgScores"></div></div>
+    <div class="card" id="sgPadCard">
+      <h2>점수와 이유를 확인했으면 아래에 서명하세요</h2>
+      <p class="muted small">이해가 안 되거나 점수가 이상하면 서명하지 말고 "질문 있어요"를 누르세요.</p>
+      <div id="padNote" class="notice warn" hidden>화면 크기가 바뀌어서 서명을 지웠어요. 다시 써 주세요.</div>
+      <div id="sgErr" class="notice err" hidden>저장되지 않았어요. 선생님께 알려 주세요.</div>
+      <div class="padwrap"><canvas id="pad"></canvas><div class="baseline"></div><div class="padhint" id="padHint">여기에 서명</div></div>
+      <div class="row between">
+        <button id="sgClear">다시 쓰기</button>
+        <span class="row"><button class="big" id="sgAsk">질문 있어요</button>
+        <button class="seal-btn big" id="sgOk" disabled>서명 제출</button></span>
+      </div>
+      <div id="askBox" hidden style="display:flex;flex-direction:column;gap:8px">
+        <label class="field">궁금한 점 (안 써도 됩니다)<textarea id="askText" maxlength="300"></textarea></label>
+        <div class="row between"><button id="askCancel">취소</button><button class="primary big" id="askOk">질문 남기기</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+
+<div class="modal" id="pinModal" hidden>
+  <div class="card">
+    <h2>교사 비밀번호</h2>
+    <input id="pinIn" type="password" inputmode="numeric" autocomplete="off">
+    <p id="pinErr" class="small" style="color:var(--seal)" hidden>비밀번호가 맞지 않습니다.</p>
+    <div class="row between"><button id="pinCancel">취소</button><button class="primary" id="pinOk">확인</button></div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+'use strict';
+pdfjsLib.GlobalWorkerOptions.workerSrc='vendor/pdf.worker.min.js';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const norm=s=>String(s||'').replace(/\s+/g,'');
+const cxOf=c=>(c.x0+c.x1)/2;
+
+let S=null;            // 저장되는 작업 상태
+let pdfDoc=null;       // pdf.js 문서
+const cache={};        // 쪽별 글자/선 정보
+let view=0, current=null;
+
+/* ---------- 저장소 (IndexedDB) ---------- */
+const DB={
+  db:null,
+  open(){if(this.db)return Promise.resolve(this.db);return new Promise((res,rej)=>{const r=indexedDB.open('suhaeng-reason',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>{this.db=r.result;this.db.onversionchange=()=>{this.db.close();this.db=null;};res(this.db);};r.onerror=()=>rej(r.error);});},
+  async set(k,v){try{const db=await this.open();await new Promise((res,rej)=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').put(v,k);t.oncomplete=res;t.onerror=t.onabort=()=>rej(t.error);});return true;}catch(e){console.warn(e);return false;}},
+  async get(k){try{const db=await this.open();return await new Promise((res,rej)=>{const t=db.transaction('kv');const q=t.objectStore('kv').get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);});}catch(e){return undefined;}},
+  async del(k){try{const db=await this.open();await new Promise(res=>{const t=db.transaction('kv','readwrite');t.objectStore('kv').delete(k);t.oncomplete=res;t.onerror=res;});}catch(e){}}
+};
+let saveTimer=null;
+async function writeNow(){
+  if(!S)return true;const st=S;
+  if(!await DB.set('sess:'+st.id,st))return false;
+  const list=(await DB.get('list'))||[];
+  const e={id:st.id,title:st.title,total:st.students.length,done:st.students.filter(x=>st.sigs[x.id]).length,updated:Date.now()};
+  const i=list.findIndex(x=>x.id===st.id);if(i>=0)list[i]=e;else list.push(e);
+  return await DB.set('list',list);
+}
+function save(now){clearTimeout(saveTimer);if(now)return writeNow();saveTimer=setTimeout(writeNow,400);}
+async function fileId(bytes){
+  try{const h=await crypto.subtle.digest('SHA-256',bytes);return[...new Uint8Array(h)].slice(0,12).map(b=>b.toString(16).padStart(2,'0')).join('');}
+  catch(e){let h=2166136261;const u=new Uint8Array(bytes);const step=Math.max(1,Math.floor(u.length/50000));for(let i=0;i<u.length;i+=step){h^=u[i];h=Math.imul(h,16777619);}return 'f'+u.length+'-'+(h>>>0).toString(16);}
+}
+const noLabel=no=>!no?'':/^\d+$/.test(no)?no+'번 ':no+' ';
+const ls={get(k){try{return localStorage.getItem(k)}catch(e){return null}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}},del(k){try{localStorage.removeItem(k)}catch(e){}}};
+
+function show(id){for(const s of document.querySelectorAll('section'))s.hidden=s.id!==id;window.scrollTo(0,0);}
+function msg(el,text,kind){el.innerHTML=text?`<div class="notice ${kind||'warn'}">${text}</div>`:'';}
+function toast(t){const el=$('#toast');el.textContent=t;el.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>el.hidden=true,1800);}
+
+/* ---------- PDF 글자를 줄·칸으로 묶기 ---------- */
+const KEYS=['비고','성명','이름','번호','학번'];
+function textLines(tc,vp){
+  const raw=[];
+  for(const it of tc.items){
+    if(!it.str||!it.str.trim())continue;
+    const t=pdfjsLib.Util.transform(vp.transform,it.transform);
+    const h=Math.hypot(t[2],t[3])||Math.hypot(t[0],t[1])||8;
+    raw.push({s:it.str,x0:t[4],x1:t[4]+(it.width||h*it.str.length*0.9)*vp.scale,y:t[5],h});
+  }
+  raw.sort((a,b)=>a.y-b.y||a.x0-b.x0);
+  const lines=[];
+  for(const r of raw){
+    let L=null;
+    for(let i=lines.length-1;i>=0&&i>=lines.length-6;i--){if(Math.abs(lines[i].y-r.y)<Math.max(1.5,Math.min(lines[i].h,r.h)*0.45)){L=lines[i];break;}}
+    if(!L){L={y:r.y,h:r.h,items:[]};lines.push(L);}
+    L.items.push(r);L.h=Math.max(L.h,r.h);
+  }
+  for(const L of lines){
+    L.items.sort((a,b)=>a.x0-b.x0);
+    const cells=[];
+    for(const r of L.items){
+      const c=cells[cells.length-1];const gap=c?r.x0-c.x1:1e9;
+      if(c&&gap<Math.max(1.2,r.h*0.3)){c.s+=(gap>r.h*0.12?' ':'')+r.s;c.x1=Math.max(c.x1,r.x1);c.h=Math.max(c.h,r.h);}
+      else cells.push({s:r.s,x0:r.x0,x1:r.x1,y:L.y,h:r.h});
+    }
+    L.cells=mergeKeys(cells);
+  }
+  return lines;
+}
+function mergeKeys(cells){ // '비    고'처럼 띄어 쓴 머리글 합치기
+  const out=[];
+  for(let i=0;i<cells.length;i++){
+    let done=false;
+    for(let n=3;n>=2&&!done;n--){
+      if(i+n>cells.length)continue;
+      const g=cells.slice(i,i+n);const s=g.map(c=>norm(c.s)).join('');
+      if(KEYS.includes(s)&&g[n-1].x0-g[0].x1<g[0].h*7){out.push({s,x0:g[0].x0,x1:g[n-1].x1,y:g[0].y,h:g[0].h});i+=n-1;done=true;}
+    }
+    if(!done)out.push(cells[i]);
+  }
+  return out;
+}
+
+/* ---------- PDF 표 테두리 선 읽기 ---------- */
+async function gridLines(page,vp){
+  const O=pdfjsLib.OPS, U=pdfjsLib.Util;
+  let ops;try{ops=await page.getOperatorList();}catch(e){return{V:[],H:[]};}
+  let ctm=[1,0,0,1,0,0];const stack=[];const V=[],H=[];
+  const seg=(a,b)=>{const dx=Math.abs(a[0]-b[0]),dy=Math.abs(a[1]-b[1]);
+    if(dx<1&&dy>2)V.push({x:(a[0]+b[0])/2,y0:Math.min(a[1],b[1]),y1:Math.max(a[1],b[1])});
+    else if(dy<1&&dx>2)H.push({y:(a[1]+b[1])/2,x0:Math.min(a[0],b[0]),x1:Math.max(a[0],b[0])});};
+  const mid=(a,b)=>[(a[0]+b[0])/2,(a[1]+b[1])/2];
+  for(let i=0;i<ops.fnArray.length;i++){
+    const fn=ops.fnArray[i],args=ops.argsArray[i];
+    if(fn===O.save)stack.push(ctm);
+    else if(fn===O.restore)ctm=stack.pop()||ctm;
+    else if(fn===O.transform)ctm=U.transform(ctm,args);
+    else if(fn===O.paintFormXObjectBegin){stack.push(ctm);if(args&&args[0])ctm=U.transform(ctm,args[0]);}
+    else if(fn===O.paintFormXObjectEnd)ctm=stack.pop()||ctm;
+    else if(fn===O.constructPath){
+      const pops=args[0],pa=args[1];const M=U.transform(vp.transform,ctm);const P=(x,y)=>U.applyTransform([x,y],M);
+      let k=0,cur=null,start=null;
+      for(const op of pops){
+        if(op===O.rectangle){const x=pa[k],y=pa[k+1],w=pa[k+2],h=pa[k+3];k+=4;
+          const a=P(x,y),b=P(x+w,y),c=P(x+w,y+h),d=P(x,y+h);
+          const W=Math.hypot(b[0]-a[0],b[1]-a[1]),Hh=Math.hypot(d[0]-a[0],d[1]-a[1]);
+          if(W<3&&Hh>2)seg(mid(a,b),mid(d,c));else if(Hh<3&&W>2)seg(mid(a,d),mid(b,c));
+          else{seg(a,b);seg(b,c);seg(c,d);seg(d,a);}
+          cur=start=a;}
+        else if(op===O.moveTo){cur=start=P(pa[k],pa[k+1]);k+=2;}
+        else if(op===O.lineTo){const p=P(pa[k],pa[k+1]);k+=2;if(cur)seg(cur,p);cur=p;}
+        else if(op===O.curveTo){cur=P(pa[k+4],pa[k+5]);k+=6;}
+        else if(op===O.curveTo2||op===O.curveTo3){cur=P(pa[k+2],pa[k+3]);k+=4;}
+        else if(op===O.closePath){if(cur&&start)seg(cur,start);cur=start;}
+      }
+    }
+  }
+  return{V,H};
+}
+
+async function pageData(pi){
+  if(cache[pi])return cache[pi];
+  const page=await pdfDoc.getPage(pi+1);const vp=page.getViewport({scale:1});
+  const tc=await page.getTextContent();
+  const lines=textLines(tc,vp);const g=await gridLines(page,vp);
+  return cache[pi]={vp,lines,V:g.V,H:g.H};
+}
+
+/* ---------- 자동 인식 ---------- */
+const EXCL=['성명','이름','번호','비고','합계','총점','평균','학번','담임','교사','과목','학년','점수','만점','확인','서명','교과','담당','교감','교장','결재','평가','영역','반'];
+const isName=s=>{const n=norm(s);return /^[가-힣]{2,5}$/.test(n)&&!EXCL.includes(n);};
+const fmtNum=v=>{const t=String(v??'').trim();return /^\d+\.\d+$/.test(t)?String(parseFloat(t)):t;};
+// 두 줄로 나뉜 머리글을 이을 때, 한글끼리 이어지면 붙여 쓴다
+function joinParts(parts){let out='';for(const p of parts){if(!p)continue;if(!out){out=p;continue;}
+  out+=(/[가-힣]$/.test(out)&&/^[가-힣]/.test(p))?'':' ';out+=p;}return out.replace(/\s+/g,' ').trim();}
+const cleanItemName=n=>n.replace(/\(\s*만점[^)]*\)/g,'').replace(/\(\s*\d+(?:\.\d+)?\s*점\s*\)/g,'').replace(/\s+/g,' ').trim();
+const isTotalName=n=>/^(합계|총점|총계|계|합|총합)$/.test(norm(n));
+function syncTotal(){
+  if(!S)return;
+  for(const it of S.items)if(it.auto===undefined)it.auto=isTotalName(it.name)&&!String(it.max||'').trim();
+  const others=S.items.filter(it=>!it.auto&&!isTotalName(it.name));
+  const nums=others.map(it=>parseFloat(it.max));
+  const sum=nums.length&&nums.every(n=>!isNaN(n))?String(Math.round(nums.reduce((a,b)=>a+b,0)*100)/100):'';
+  S.items.forEach((it,i)=>{if(it.auto){it.max=sum;const el=document.querySelector(`input[data-item="${i}"][data-k="max"]`);if(el&&document.activeElement!==el)el.value=sum;}});
+}
+function parseMax(s){const m=s.match(/\((\d+(?:\.\d+)?)\s*점?\)/)||s.match(/(\d+(?:\.\d+)?)\s*점/)||s.match(/만점\D{0,3}(\d+(?:\.\d+)?)/);return m?m[1]:'';}
+
+// 행(줄) 위아래 경계: 표 가로선 → 없으면 이웃 학생과의 중간
+function fitRows(rows,H,bx){
+  rows.sort((a,b)=>a.y-b.y);
+  rows.forEach((r,i)=>{
+    const yc=r.y-r.h*0.32;
+    const hs=H.filter(h=>h.x0-2<=bx&&h.x1+2>=bx).map(h=>h.y);
+    const up=hs.filter(y=>y<yc-r.h*0.35&&yc-y<r.h*4);const dn=hs.filter(y=>y>yc+r.h*0.3&&y-yc<r.h*4);
+    const prev=rows[i-1],next=rows[i+1];
+    const pitch=next?next.y-r.y:prev?r.y-prev.y:r.h*2.2;
+    r.top=up.length?Math.max(...up):(prev?(prev.y+r.y)/2-r.h*0.32:yc-pitch/2);
+    r.bottom=dn.length?Math.min(...dn):(next?(r.y+next.y)/2-r.h*0.32:yc+pitch/2);
+    if(prev&&r.top<prev.bottom-0.5&&!up.length)r.top=prev.bottom;
+  });
+}
+// 비고 칸 좌우 경계: 표 세로선 → 없으면 글자 위치로 추정
+function fitCol(bigo,V,rowY,prevRight,pageW){
+  const bx=cxOf(bigo);
+  const vs=V.filter(v=>v.y0-1<=rowY&&v.y1+1>=rowY).map(v=>v.x);
+  let left=-Infinity,right=Infinity;
+  for(const x of vs){if(x<=bigo.x0+0.5&&x>left)left=x;if(x>=bigo.x1-0.5&&x<right)right=x;}
+  if(!isFinite(left)||bx-left>220)left=prevRight!=null?(prevRight+Math.min(bigo.x0,bx-10))/2:bigo.x0-20;
+  if(!isFinite(right)||right-bx>220)right=Math.min(pageW-4,bx+(bx-left));
+  return{x0:left,x1:right};
+}
+
+async function analyzePage(pi){
+  const D=await pageData(pi);const {lines,vp}=D;
+  let bigo=null;
+  for(const L of lines)for(const c of L.cells){const n=norm(c.s);if(n==='비고'||(n.includes('비고')&&n.length<=5)){if(!bigo||c.y<bigo.y)bigo=c;}}
+  if(!bigo)return null;
+  const hdr=lines.filter(L=>L.y>=bigo.y-bigo.h*8&&L.y<=bigo.y+bigo.h*4).flatMap(L=>L.cells);
+  const find=keys=>hdr.find(c=>keys.includes(norm(c.s)));
+  const nameH=find(['성명','이름']),noH=find(['번호','학번','반/번호','반번호','반-번호']);
+  let nameCx=nameH?cxOf(nameH):null;
+  if(nameCx==null){
+    const xs=[];for(const L of lines){if(L.y<=bigo.y)continue;const c=L.cells.find(c=>isName(c.s)&&c.x1<bigo.x0);if(c)xs.push(cxOf(c));}
+    if(!xs.length)return null;xs.sort((a,b)=>a-b);nameCx=xs[Math.floor(xs.length/2)];
+  }
+  const tol=nameH?Math.max(16,(nameH.x1-nameH.x0)*1.2):20;
+  const studs=[];
+  for(const L of lines){
+    if(L.y<=bigo.y+1)continue;
+    const nc=L.cells.find(c=>Math.abs(cxOf(c)-nameCx)<tol&&isName(c.s)&&c.x1<bigo.x0);
+    if(nc)studs.push({L,nc});
+  }
+  if(!studs.length)return null;
+  const noCx=noH?cxOf(noH):null;
+  for(const s of studs){
+    const c=s.L.cells.find(c=>c!==s.nc&&/^(\d{1,5}|\d{1,2}[\/\-.]\d{1,3})$/.test(norm(c.s))&&(noCx!=null?Math.abs(cxOf(c)-noCx)<20:c.x1<=s.nc.x0+1));
+    s.no=c?norm(c.s):'';s.noCell=c||null;
+  }
+  // 점수 칸(열) 찾기
+  const nameRight=Math.max(...studs.map(s=>s.nc.x1));
+  const pts=[];
+  for(const s of studs)for(const c of s.L.cells){if(c===s.nc||c===s.noCell)continue;const x=cxOf(c);if(x>nameRight&&x<bigo.x0-1)pts.push(x);}
+  pts.sort((a,b)=>a-b);
+  const cl=[];for(const x of pts){const k=cl[cl.length-1];if(k&&x-k.last<9){k.xs.push(x);k.last=x;}else cl.push({xs:[x],last:x});}
+  const colsX=cl.filter(k=>k.xs.length>=Math.max(1,studs.length*0.2)).map(k=>k.xs.reduce((a,b)=>a+b,0)/k.xs.length);
+  const firstTop=Math.min(...studs.map(s=>s.L.y-s.L.h));
+  const bx0=cxOf(bigo);
+  const tops=D.H.filter(h=>h.x0-2<=bx0&&h.x1+2>=bx0&&h.y<bigo.y-bigo.h*0.8&&bigo.y-h.y<bigo.h*10).map(h=>h.y);
+  const tableTop=tops.length?Math.max(...tops):bigo.y-bigo.h*3;
+  const hdrLines=lines.filter(L=>L.y<firstTop+1&&L.y>tableTop);
+  const items=colsX.map((x,i)=>{
+    const half=Math.min(i>0?(x-colsX[i-1])/2:30,i<colsX.length-1?(colsX[i+1]-x)/2:30);
+    const parts=[];
+    for(const L of hdrLines)for(const c of L.cells){if((c.x0-2<=x&&c.x1+2>=x)||Math.abs(cxOf(c)-x)<half)parts.push(c.s.trim());}
+    const raw=joinParts(parts);const name=cleanItemName(raw);
+    return{name:name||raw||`항목 ${i+1}`,max:fmtNum(parseMax(raw)),show:true};
+  });
+  const rows=studs.map(s=>{
+    const scores=colsX.map(()=>'');
+    for(const c of s.L.cells){if(c===s.nc||c===s.noCell)continue;const x=cxOf(c);if(x<=nameRight||x>=bigo.x0-1)continue;
+      let bi=-1,bd=1e9;colsX.forEach((cx,i)=>{const d=Math.abs(cx-x);if(d<bd){bd=d;bi=i;}});
+      if(bi>=0)scores[bi]=(scores[bi]?scores[bi]+' ':'')+c.s.trim();}
+    for(let i=0;i<scores.length;i++)scores[i]=fmtNum(scores[i]);
+    return{page:pi,no:s.no,name:norm(s.nc.s),y:s.L.y,h:s.L.h,scores};
+  });
+  const bx=cxOf(bigo);
+  fitRows(rows,D.H,bx);
+  let prevRight=null;for(const s of studs)for(const c of s.L.cells)if(cxOf(c)<bigo.x0-1)prevRight=Math.max(prevRight??-1e9,c.x1);
+  const mid=rows[Math.floor(rows.length/2)];
+  const col=fitCol(bigo,D.V,mid.y-mid.h*0.32,prevRight,vp.width);
+  return{col,items,rows};
+}
+
+function freshState(name,bytes,n){
+  return{id:'',title:name.replace(/\.pdf$/i,''),fileName:name,bytes,numPages:n,items:[],students:[],cols:{},adj:{l:0,r:0,dy:0,pad:2},sigs:{},snap:{},pin:'',skipText:'',reason:null,map:null,log:{}};
+}
+
+async function runAuto(){
+  const res=[];
+  for(let pi=0;pi<pdfDoc.numPages;pi++){const r=await analyzePage(pi);if(r)res.push(r);}
+  if(!res.length)return false;
+  const first=res.reduce((a,b)=>b.items.length>a.items.length?b:a);
+  S.items=first.items;S.cols={};S.students=[];syncTotal();
+  for(const r of res){
+    S.cols[r.rows[0].page]=r.col;
+    for(const row of r.rows){
+      const sc=S.items.map((_,i)=>row.scores[i]??'');
+      S.students.push({id:`${row.page}-${Math.round(row.y)}`,page:row.page,no:row.no,name:row.name,top:row.top,bottom:row.bottom,scores:sc});
+    }
+  }
+  return true;
+}
+
+/* ---------- PDF 열기 ---------- */
+async function openPdf(bytes){
+  for(const k in cache)delete cache[k];
+  pdfDoc=await pdfjsLib.getDocument({data:new Uint8Array(bytes.slice(0))}).promise;
+}
+async function loadFile(file){
+  const out=$('#startMsg');msg(out,'일람표를 읽는 중입니다…','ok');
+  try{
+    const bytes=await file.arrayBuffer();
+    const id=await fileId(bytes);
+    const old=await DB.get('sess:'+id);
+    await openPdf(bytes);
+    if(old&&old.bytes){S=old;msg(out,'');openReview('이미 올린 일람표입니다. 저장된 서명에 이어서 진행합니다.');return;}
+    S=freshState(file.name,bytes,pdfDoc.numPages);S.id=id;
+    const ok=await runAuto();
+    await save(true);
+    msg(out,'');
+    openReview(ok?'':'비고란이나 학생 이름을 자동으로 찾지 못했습니다. 나이스에서 내려받은 PDF 원본인지 확인해 주세요.');
+  }catch(e){console.error(e);msg(out,'PDF를 열지 못했습니다. 나이스에서 받은 PDF 원본인지 확인하세요. ('+esc(e.message)+')','err');}
+}
+
+/* ---------- 교사 확인 화면 ---------- */
+function openReview(warning){
+  show('scr-review');
+  $('#rvTitle').value=S.title||S.fileName.replace(/\.pdf$/i,'');
+  const n=S.students.length,signed=Object.keys(S.sigs).filter(id=>S.students.some(s=>s.id===id)).length;
+  msg($('#rvMsg'),warning||(n?`학생 ${n}명, 평가 항목 ${S.items.length}개를 찾았습니다. 서명 ${signed}명 완료.`:''),warning?'warn':'ok');
+  $('#skipText').value=S.skipText||'';$('#pinSet').value=S.pin||'';
+  for(const k of ['l','r','dy','pad'])$('#o_'+k).textContent=S.adj[k];
+  S.log=S.log||{};syncTotal();renderItems();renderReason();renderStudents();updateExportInfo();
+  const pages=pagesWithStudents();view=pages.includes(view)?view:(pages[0]??0);
+  renderPreview();
+}
+function pagesWithStudents(){return[...new Set(S.students.map(s=>s.page))].sort((a,b)=>a-b);}
+function renderItems(){
+  $('#itemBody').innerHTML=S.items.map((it,i)=>`<tr><td class="nm"><input data-item="${i}" data-k="name" value="${esc(it.name)}"></td><td><input data-item="${i}" data-k="max" value="${esc(it.max)}" inputmode="decimal" style="width:70px"></td><td><input type="checkbox" data-item="${i}" data-k="show" ${it.show!==false?'checked':''} style="width:22px;min-height:22px"></td></tr>`).join('')||'<tr><td colspan="3" class="muted">항목 없음</td></tr>';
+}
+function renderStudents(){
+  $('#stCount').textContent=`${S.students.length}명`;
+  $('#stHead').innerHTML=`<tr><th>쪽</th><th>번호</th><th>이름</th>${S.items.map(it=>`<th>${esc(it.name)}</th>`).join('')}<th>서명</th><th>이유 자료</th><th>질문</th><th></th></tr>`;
+  updateExportInfo();
+  $('#stBody').innerHTML=S.students.map((s,i)=>`<tr><td>${s.page+1}</td><td><input data-st="${i}" data-k="no" value="${esc(s.no)}" style="width:56px"></td><td class="nm"><input data-st="${i}" data-k="name" value="${esc(s.name)}"></td>${s.scores.map((v,j)=>`<td><input data-st="${i}" data-k="sc" data-j="${j}" value="${esc(v)}"></td>`).join('')}<td>${S.sigs[s.id]?'<span style="color:var(--ok)">완료</span>'+(changedAfterSign(s)?' <span class="tag bad">서명 뒤 점수 바뀜</span>':''):'<span class="muted">-</span>'}</td><td>${dataTag(s)}</td><td>${askTag(s)}</td><td><button class="x" data-del="${i}" aria-label="삭제">✕</button></td></tr>`).join('');
+}
+document.addEventListener('input',e=>{
+  const t=e.target;if(!S)return;
+  if(t.dataset.item!=null){const it=S.items[+t.dataset.item];if(t.dataset.k==='show')it.show=t.checked;else it[t.dataset.k]=t.value;if(t.dataset.k==='max'){if(it.auto)it.auto=false;syncTotal();}if(t.dataset.k==='name'&&it.auto===false&&isTotalName(it.name)&&!String(it.max).trim()){it.auto=true;syncTotal();}if(t.dataset.k==='name')$('#stHead').querySelectorAll('th')[3+ +t.dataset.item].textContent=t.value;save();}
+  else if(t.dataset.st!=null){const s=S.students[+t.dataset.st];if(t.dataset.k==='sc'){s.scores[+t.dataset.j]=t.value;updateExportInfo();}else{s[t.dataset.k]=t.value;if(t.dataset.k==='name')drawBoxes();}save();}
+  else if(t.id==='skipText'){S.skipText=t.value;save();}
+  else if(t.id==='rvTitle'){S.title=t.value.trim()||S.fileName.replace(/\.pdf$/i,'');save();}
+  else if(t.id==='pinSet'){S.pin=t.value.trim();save();}
+});
+document.addEventListener('click',e=>{
+  const d=e.target.closest('[data-del]');
+  if(d&&S){const i=+d.dataset.del;const s=S.students[i];delete S.sigs[s.id];if(S.snap)delete S.snap[s.id];if(S.log)delete S.log[s.id];S.students.splice(i,1);renderStudents();drawBoxes();updateExportInfo();save();}
+  const a=e.target.closest('[data-adj]');
+  if(a&&S){const k=a.dataset.adj;S.adj[k]=Math.round((S.adj[k]+parseFloat(a.dataset.d))*10)/10;if(k==='pad')S.adj.pad=Math.max(0,S.adj.pad);$('#o_'+k).textContent=S.adj[k];drawBoxes();save();}
+});
+
+function boxOf(st){
+  const c=S.cols[st.page]||{x0:0,x1:0};const a=S.adj;
+  return{x0:c.x0+a.l+a.pad,x1:c.x1+a.r-a.pad,y0:st.top+a.dy+a.pad,y1:st.bottom+a.dy-a.pad};
+}
+let pvScale=1,renderTask=null;
+async function renderPreview(){
+  const pages=pagesWithStudents();
+  $('#pvLabel').textContent=pdfDoc?`${view+1}쪽 / 전체 ${pdfDoc.numPages}쪽`:'';
+  $('#pvPrev').disabled=!pages.some(p=>p<view);$('#pvNext').disabled=!pages.some(p=>p>view);
+  if(!pdfDoc)return;
+  const page=await pdfDoc.getPage(view+1);const vp1=page.getViewport({scale:1});
+  const W=$('#pv').clientWidth||600;pvScale=W/vp1.width;
+  const dpr=Math.min(window.devicePixelRatio||1,2);const vp=page.getViewport({scale:pvScale*dpr});
+  const cv=$('#pvCanvas');cv.width=vp.width;cv.height=vp.height;
+  if(renderTask)try{renderTask.cancel();}catch(e){}
+  renderTask=page.render({canvasContext:cv.getContext('2d'),viewport:vp});
+  try{await renderTask.promise;}catch(e){}
+  drawBoxes();
+}
+function drawBoxes(){
+  const el=$('#pvBoxes');if(!S){el.innerHTML='';return;}
+  el.innerHTML=S.students.filter(s=>s.page===view).map(s=>{const b=boxOf(s);const k=pvScale;const sig=S.sigs[s.id];
+    return`<div class="box ${sig?'done':''}" style="left:${b.x0*k}px;top:${b.y0*k}px;width:${Math.max(2,(b.x1-b.x0)*k)}px;height:${Math.max(2,(b.y1-b.y0)*k)}px">${sig?`<img src="${sig}" data-sid="${esc(s.id)}" alt="">`:`<span>${esc(s.name)}</span>`}</div>`;}).join('');
+  boldPreviews();
+}
+$('#pvPrev').onclick=()=>{const p=pagesWithStudents().filter(p=>p<view);if(p.length){view=p[p.length-1];renderPreview();}};
+$('#pvNext').onclick=()=>{const p=pagesWithStudents().find(p=>p>view);if(p!=null){view=p;renderPreview();}};
+window.addEventListener('resize',()=>{if(!$('#scr-review').hidden){clearTimeout(renderPreview.t);renderPreview.t=setTimeout(renderPreview,200);}});
+$('#btnNew').onclick=async()=>{await save(true);show('scr-start');$('#file').value='';renderSaved();};
+
+/* ---------- 잠금과 교사 비밀번호 ---------- */
+let lockRec=null,pinCb=null,fail={n:0,until:0};
+try{fail=JSON.parse(ls.get('sr-fail')||'')||fail;}catch(e){}
+if(fail.until>Date.now()+30000)fail.until=Date.now()+30000; // 기기 시각이 틀어져도 30초를 넘지 않게
+async function hashPin(pin,salt){
+  const t=salt+':'+pin;
+  try{const h=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return[...new Uint8Array(h)].map(b=>b.toString(16).padStart(2,'0')).join('');}
+  catch(e){let h=2166136261;for(const ch of t){h^=ch.codePointAt(0);h=Math.imul(h,16777619);}return 'f'+(h>>>0).toString(16);}
+}
+async function lockOn(){
+  const salt=Math.random().toString(36).slice(2)+Date.now().toString(36);
+  const rec={id:S.id,salt,hash:await hashPin(S.pin,salt)};
+  if(!await DB.set('lock',rec))return false;
+  ls.set('sr-lock',JSON.stringify(rec)); // 저장소를 못 읽고 열려도 잠김을 알 수 있게 한 벌 더
+  lockRec=rec;return true;
+}
+async function lockOff(){lockRec=null;ls.del('sr-lock');await DB.del('lock');}
+function askPin(cb){pinCb=cb;$('#pinIn').value='';$('#pinErr').hidden=true;$('#pinModal').hidden=false;setTimeout(()=>$('#pinIn').focus(),50);}
+const gated=fn=>lockRec?askPin(async()=>{await lockOff();fn();}):fn();
+function pinFail(text){$('#pinErr').textContent=text;$('#pinErr').hidden=false;}
+$('#pinCancel').onclick=()=>{pinCb=null;$('#pinModal').hidden=true;};
+$('#pinOk').onclick=async()=>{
+  const wait=Math.ceil((fail.until-Date.now())/1000);
+  if(wait>0){pinFail(`${wait}초 뒤에 다시 눌러 주세요.`);return;}
+  const v=$('#pinIn').value.trim();
+  const good=lockRec?await hashPin(v,lockRec.salt)===lockRec.hash:v===S.pin;
+  if(good){fail={n:0,until:0};ls.set('sr-fail',JSON.stringify(fail));$('#pinModal').hidden=true;const cb=pinCb;pinCb=null;if(cb)cb();return;}
+  fail.n++;if(fail.n>=3)fail.until=Date.now()+30000;ls.set('sr-fail',JSON.stringify(fail));
+  pinFail(fail.n>=3?'비밀번호가 맞지 않습니다. 30초 뒤에 다시 해 주세요.':'비밀번호가 맞지 않습니다.');
+};
+$('#pinIn').addEventListener('keydown',e=>{if(e.key==='Enter')$('#pinOk').click();});
+
+/* ---------- 학생 화면 ---------- */
+let wakeLock=null;
+async function keepAwake(){try{wakeLock=await navigator.wakeLock?.request('screen');}catch(e){}}
+function openList(){
+  clearTimeout(idleT);clearSignView();
+  show('scr-list');keepAwake();
+  const done=S.students.filter(s=>S.sigs[s.id]).length;
+  $('#listProg').textContent=`서명 ${done}명 / 전체 ${S.students.length}명`;
+  $('#slist').innerHTML=S.students.map((s,i)=>`<button class="sbtn ${S.sigs[s.id]?'done':''}" data-pick="${i}"><span class="no"></span><span class="nm">${esc(s.name)}</span></button>`).join('');
+}
+$('#btnStudent').onclick=async()=>{
+  const bar=$('#rvMsg');window.scrollTo(0,0);
+  if(!S.students.length){msg(bar,'학생 명단이 비어 있습니다.','err');return;}
+  if(!/^\d{4,}$/.test((S.pin||'').trim())){msg(bar,'교사 비밀번호를 숫자 4자리 이상으로 넣어 주세요. 학생 화면에서 교사 화면으로 돌아올 때 필요합니다.','err');return;}
+  if(S.reason&&!(S.map||[]).some(Boolean)){msg(bar,'이유 자료와 맞춰 볼 일람표 칸이 하나도 없습니다. "일람표 칸과 이유 자료 점수 맞추기"에서 칸을 골라 주세요.','err');return;}
+  if(!await save(true)||!await lockOn()){msg(bar,'이 기기에 저장하지 못해 학생 서명을 시작할 수 없습니다.','err');return;}
+  openList();
+};
+$('#slist').onclick=e=>{const b=e.target.closest('[data-pick]');if(!b)return;const st=S.students[+b.dataset.pick];
+  const go=()=>{current=st;$('#cfWho').textContent=st.name;$('#cfNum').value='';$('#cfErr').hidden=true;$('#cfNote').hidden=!S.sigs[st.id];show('scr-confirm');setTimeout(()=>$('#cfNum').focus(),50);};
+  if(S.sigs[st.id])askPin(go);else go();};
+$('#cfNo').onclick=()=>{current=null;openList();};
+let cfFail=0;
+$('#cfYes').onclick=()=>{
+  const want=digits(current.no),v=$('#cfNum').value.trim();
+  if(!want){askPin(()=>openSign());return;}
+  if(!/^\d+$/.test(v)||String(parseInt(v,10))!==want){
+    cfFail++;$('#cfErr').hidden=false;
+    if(cfFail>=3){askPin(()=>{cfFail=0;$('#cfNum').value='';$('#cfErr').hidden=true;});} // 연속 3번 틀리면 선생님이 풀어 준다
+    return;}
+  cfFail=0;openSign();
+};
+$('#cfNum').addEventListener('keydown',e=>{if(e.key==='Enter')$('#cfYes').click();});
+let idleT=null;
+function armIdle(){clearTimeout(idleT);idleT=setTimeout(()=>{if(!$('#scr-sign').hidden){current=null;openList();}},180000);}
+for(const t of ['pointerdown','keydown','touchstart','scroll'])document.addEventListener(t,()=>{if(!$('#scr-sign').hidden)armIdle();},{passive:true});
+function clearSignView(){
+  $('#sgReason').innerHTML='';$('#sgScores').innerHTML='';$('#sgWho').textContent='';
+  const bad=$('#sgBad');bad.hidden=true;bad.textContent='';$('#padNote').hidden=true;$('#sgErr').hidden=true;$('#askBox').hidden=true;
+}
+function openSign(){
+  clearSignView();show('scr-sign');$('#sgPadCard').hidden=true;
+  try{
+    const ck=checkStudent(current);const bad=ck.state==='bad';
+    const rows=S.items.map((it,i)=>({it,v:current.scores[i]})).filter(r=>r.it.show!==false);
+    const scoresHtml=rows.map(r=>`<div class="sc"><span class="it">${esc(r.it.name)}</span><span class="val">${esc(fmtNum(r.v)||'-')}${r.it.max?` <small>/ ${esc(fmtNum(r.it.max))}</small>`:''}</span></div>`).join('')||'<p class="muted">표시할 항목이 없습니다.</p>';
+    const reasonHtml=ck.state==='ok'?reasonHTML(ck.r):'';
+    $('#sgWho').textContent=noLabel(current.no)+current.name;
+    $('#sgScores').innerHTML=scoresHtml;$('#sgReason').innerHTML=reasonHtml;
+    $('#sgScoresTitle').textContent=ck.state==='ok'?'나이스 일람표에 들어간 내 점수':'내 점수';
+    $('#sgBad').hidden=!bad;
+    if(bad)$('#sgBad').textContent='이 화면의 점수 자료가 서로 맞지 않아 지금은 서명할 수 없습니다. 선생님께 말씀해 주세요.';
+    $('#sgPadCard').hidden=bad;
+    if(!bad){const L=logOf(current);L.views.push(Date.now());save();setupPad();}
+  }catch(e){
+    console.error(e);clearSignView();$('#sgPadCard').hidden=true;
+    $('#sgBad').textContent='화면을 만들지 못했습니다. 선생님께 알려 주세요.';$('#sgBad').hidden=false;
+  }
+  armIdle();
+}
+$('#sgCancel').onclick=()=>{current=null;openList();};
+
+/* 서명 패드 */
+const pad={drawn:false,down:false,p0:null,p1:null,w:0};
+function setupPad(){
+  const c=$('#pad');const r=c.getBoundingClientRect();const d=window.devicePixelRatio||1;
+  c.width=Math.round(r.width*d);c.height=Math.round(r.height*d);
+  const g=c.getContext('2d');g.setTransform(d,0,0,d,0,0);g.lineCap='round';g.lineJoin='round';
+  g.strokeStyle=getComputedStyle(document.documentElement).getPropertyValue('--pen').trim()||'#111';g.fillStyle=g.strokeStyle;
+  pad.drawn=false;pad.down=false;pad.w=r.width;$('#padHint').hidden=false;$('#sgOk').disabled=true;$('#padNote').hidden=true;
+}
+function refitPad(){
+  if($('#scr-sign').hidden||$('#sgPadCard').hidden)return;
+  if(Math.abs($('#pad').getBoundingClientRect().width-pad.w)<1)return;
+  const had=pad.drawn;setupPad();if(had)$('#padNote').hidden=false;
+}
+for(const t of ['resize','orientationchange'])window.addEventListener(t,()=>{clearTimeout(refitPad.t);refitPad.t=setTimeout(refitPad,200);});
+function pt(e){const r=$('#pad').getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top,w:e.pointerType==='pen'&&e.pressure>0?2.4+e.pressure*3:4.5};}
+const padEl=$('#pad');
+padEl.addEventListener('pointerdown',e=>{e.preventDefault();padEl.setPointerCapture(e.pointerId);pad.down=true;const p=pt(e);pad.p0=pad.p1=p;
+  const g=padEl.getContext('2d');g.beginPath();g.arc(p.x,p.y,p.w/2,0,Math.PI*2);g.fill();
+  if(!pad.drawn){pad.drawn=true;$('#padHint').hidden=true;$('#sgOk').disabled=false;}});
+padEl.addEventListener('pointermove',e=>{if(!pad.down)return;e.preventDefault();const g=padEl.getContext('2d');
+  const evs=e.getCoalescedEvents?e.getCoalescedEvents():[e];
+  for(const ev of (evs.length?evs:[e])){const p2=pt(ev);const p0=pad.p0,p1=pad.p1;
+    g.beginPath();g.moveTo((p0.x+p1.x)/2,(p0.y+p1.y)/2);g.quadraticCurveTo(p1.x,p1.y,(p1.x+p2.x)/2,(p1.y+p2.y)/2);g.lineWidth=p2.w;g.stroke();
+    pad.p0=p1;pad.p1=p2;}});
+const up=()=>{pad.down=false;};
+padEl.addEventListener('pointerup',up);padEl.addEventListener('pointercancel',up);padEl.addEventListener('pointerleave',up);
+$('#sgClear').onclick=()=>setupPad();
+function padImage(){
+  const c=$('#pad');const g=c.getContext('2d');const w=c.width,h=c.height;const d=g.getImageData(0,0,w,h).data;
+  let x0=w,y0=h,x1=-1,y1=-1;
+  for(let y=0;y<h;y+=2)for(let x=0;x<w;x+=2)if(d[(y*w+x)*4+3]>10){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;}
+  if(x1<0)return null;
+  const m=8;x0=Math.max(0,x0-m);y0=Math.max(0,y0-m);x1=Math.min(w,x1+m);y1=Math.min(h,y1+m);
+  const o=document.createElement('canvas');o.width=x1-x0;o.height=y1-y0;o.getContext('2d').drawImage(c,x0,y0,o.width,o.height,0,0,o.width,o.height);
+  return o.toDataURL('image/png');
+}
+$('#sgOk').onclick=async()=>{
+  const img=padImage();if(!img)return;
+  const id=current.id,prevSig=S.sigs[id],prevSnap=(S.snap||{})[id],L=logOf(current);
+  S.snap=S.snap||{};S.sigs[id]=img;S.snap[id]=snapOf(current);L.signs.push(Date.now());
+  if(!await save(true)){
+    if(prevSig)S.sigs[id]=prevSig;else delete S.sigs[id];
+    if(prevSnap)S.snap[id]=prevSnap;else delete S.snap[id];
+    L.signs.pop();$('#sgErr').hidden=false;return;
+  }
+  current=null;toast('서명이 저장되었습니다');openList();
+};
+
+/* 교사 화면으로 돌아가기 */
+$('#btnTeacher').onclick=()=>askPin(async()=>{await lockOff();backToTeacher();});
+function backToTeacher(){try{wakeLock?.release();}catch(e){}openReview();}
+
+/* ---------- 이유 자료 (우리 학교에서 더한 부분) ---------- */
+const digits=s=>{const m=String(s??'').match(/(\d+)\D*$/);return m?String(parseInt(m[1],10)):'';};
+const markClass=m=>/[○◯O]/.test(m)?'o':/[△]/.test(m)?'t':'x';
+const markText=m=>/[○◯O]/.test(m)?'○':/[△]/.test(m)?'△':'✕';
+const pad2=n=>String(n).padStart(2,'0');
+const fmtTime=t=>{if(!t)return'';const d=new Date(t);return`${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;};
+function logOf(st){S.log=S.log||{};return S.log[st.id]=S.log[st.id]||{views:[],signs:[],asks:[]};}
+function parseReason(txt){
+  const d=JSON.parse(txt);
+  if(d.kind!=='suhaeng-reason'||!Array.isArray(d.parts)||!Array.isArray(d.students))throw new Error('이유 자료 파일 형식이 아닙니다.');
+  return d;
+}
+function partOptions(){const R=S.reason;const o=[['','맞춰 보지 않음']];if(R.parts.length>1)o.push(['total',`합계 (${R.totalMax}점)`]);for(const p of R.parts)o.push([p.key,`${p.title} (${p.max}점)`]);return o;}
+function autoMap(){
+  const R=S.reason;
+  const maxOf=it=>parseFloat(it.max);
+  S.map=S.items.map((it,i)=>{
+    const nm=norm(it.name);
+    const hit=R.parts.find(p=>(p.match||[]).some(w=>nm.includes(norm(w))));
+    if(hit)return hit.key;
+    if(isTotalName(it.name))return '';
+    // 나이스 영역이 둘(포트폴리오 + 서술)이면 만점이 같아 점수로는 못 가른다 → 영역 이름으로 이유 자료 합계 칸을 찾는다
+    if((R.areaMatch||[]).some(w=>nm.includes(norm(w))))return R.parts.length>1?'total':R.parts[0].key;
+    const same=R.parts.filter(p=>p.max===maxOf(it));
+    const sameItems=S.items.filter(x=>maxOf(x)===maxOf(it)&&!isTotalName(x.name));
+    if(same.length===1&&sameItems.length===1)return same[0].key;
+    if(maxOf(it)===R.totalMax&&sameItems.length===1)return R.parts.length>1?'total':R.parts[0].key;
+    return '';
+  });
+}
+function reasonRow(st){if(!S.reason)return null;const no=digits(st.no);return S.reason.students.find(r=>digits(r.no)===no)||null;}
+function checkStudent(st){
+  if(!S.reason)return{state:'none'};
+  const r=reasonRow(st);
+  if(!r)return{state:'bad',why:'이유 자료에 이 번호가 없습니다'};
+  if(r.name&&norm(r.name)!==norm(st.name))return{state:'bad',why:`이름이 다릅니다(이유 자료: ${r.name})`};
+  const map=S.map||[];
+  if(!map.some(Boolean))return{state:'bad',why:'맞춰 볼 일람표 칸이 정해지지 않았습니다'};
+  const probs=[];
+  S.items.forEach((it,i)=>{const k=map[i];if(!k)return;
+    const want=k==='total'?r.total:(r.parts[k]?r.parts[k].score:null);
+    const txt=String(st.scores[i]??'').replace(/(\d),(\d)/g,'$1.$2').replace(/[^\d.]/g,'');
+    const got=/^\d+(\.\d+)?$/.test(txt)?parseFloat(txt):NaN;
+    if(isNaN(got))probs.push(`${it.name}: 일람표 점수를 읽지 못함(${st.scores[i]||'빈칸'})`);
+    else if(want==null||Math.abs(got-want)>0.001)probs.push(`${it.name}: 일람표 ${st.scores[i]||'빈칸'}, 이유 자료 ${want??'없음'}`);});
+  return probs.length?{state:'bad',why:probs.join(' · ')}:{state:'ok',r};
+}
+function dataTag(st){const c=checkStudent(st);if(c.state==='none')return'<span class="muted">-</span>';return c.state==='ok'?'<span class="tag ok">맞음</span>':`<span class="tag bad" title="${esc(c.why)}">다름</span>`;}
+function askTag(st){const L=S.log&&S.log[st.id];return L&&L.asks.length?`<span class="tag ask">${L.asks.length}번</span>`:'<span class="muted">-</span>';}
+function snapOf(st){
+  const r=reasonRow(st);
+  return{sc:st.scores.map(v=>String(v??'').trim()),rs:r?{t:r.total,p:Object.fromEntries(Object.entries(r.parts||{}).map(([k,v])=>[k,v&&v.score]))}:null};
+}
+function changedAfterSign(st){const sn=(S.snap||{})[st.id];return!!(sn&&S.sigs[st.id]&&JSON.stringify(sn)!==JSON.stringify(snapOf(st)));}
+function renderReason(){
+  const R=S.reason;
+  $('#rsRemove').hidden=!R;$('#rsMapWrap').hidden=!R;
+  if(!R){msg($('#rsInfo'),'이유 자료를 올리지 않으면 원래 서명기처럼 점수만 보입니다.','warn');return;}
+  msg($('#rsInfo'),`${esc(R.subject||'')} ${esc(R.class||'')} ${esc(R.title||'')} · 학생 ${R.students.length}명 · 만든 날 ${esc(R.made||'')}`,'ok');
+  const opts=partOptions();
+  $('#rsMap').innerHTML=S.items.map((it,i)=>`<tr><td>${esc(it.name)}${it.max?` (${esc(it.max)}점)`:''}</td><td><select data-map="${i}">${opts.map(([v,l])=>`<option value="${esc(v)}" ${((S.map||[])[i]||'')===v?'selected':''}>${esc(l)}</option>`).join('')}</select></td></tr>`).join('');
+  renderCheck();
+}
+function renderCheck(){
+  if(!S.reason){return;}
+  const res=S.students.map(st=>({st,c:checkStudent(st)}));
+  const ok=res.filter(x=>x.c.state==='ok').length,bad=res.filter(x=>x.c.state==='bad');
+  const inList=new Set(S.students.map(st=>digits(st.no)));
+  const extra=S.reason.students.filter(r=>!inList.has(digits(r.no)));
+  let h=`<div class="notice ${bad.length?'err':'ok'}">맞춰 본 칸의 점수가 맞는 학생 ${ok}명 · 다른 학생 ${bad.length}명${bad.length?' — 다른 학생은 서명 화면으로 넘어가지 않습니다.':''}</div>`;
+  const unm=S.items.filter((it,i)=>it.show!==false&&!(S.map||[])[i]).map(it=>esc(it.name));
+  if(unm.length)h+=`<div class="notice warn"><strong>${unm.join(', ')}</strong>: 이 칸은 이유 자료와 맞춰 보지 않아요. 나이스 점수만 보여요.</div>`;
+  if(!(S.map||[]).some(Boolean))h+='<div class="notice err">맞춰 볼 칸이 하나도 없어서 학생 서명을 시작할 수 없습니다.</div>';
+  if(bad.length)h+=`<ul class="small">${bad.map(x=>`<li>${esc(noLabel(x.st.no)+x.st.name)}: ${esc(x.c.why)}</li>`).join('')}</ul>`;
+  if(extra.length)h+=`<p class="small muted">일람표에 없는 이유 자료: ${extra.map(r=>esc(noLabel(r.no)+(r.name||''))).join(', ')}</p>`;
+  $('#rsCheck').innerHTML=h;
+  if($('#stBody'))renderStudents();
+}
+function reasonHTML(r){
+  const R=S.reason;
+  const parts=R.parts.map(p=>{const x=r.parts[p.key];if(!x)return'';
+    return`<div class="card rpart"><div class="row between"><h2>${esc(p.title)}</h2><span class="val">${esc(fmtNum(x.score))} <small>/ ${esc(p.max)}</small></span></div>
+    ${x.levelText?`<p class="lvl">${x.level?`<strong>${esc(x.level)} 단계</strong> · `:''}${esc(x.levelText)}</p>`:''}
+    ${x.checks&&x.checks.length?`<ul class="checks">${x.checks.map(c=>`<li><span class="mk mk-${markClass(c.mark)}" aria-label="${markText(c.mark)}">${markText(c.mark)}</span><span>${esc(c.label)}</span></li>`).join('')}</ul>`:''}
+    ${x.rule?`<p class="small muted">${esc(x.rule)}</p>`:''}
+    ${x.next&&x.next.length?`<div class="next"><strong>다음에는</strong><ul>${x.next.map(n=>`<li>${esc(n)}</li>`).join('')}</ul></div>`:''}
+    ${x.note?`<p class="tnote">선생님 한마디: ${esc(x.note)}</p>`:''}</div>`;}).join('');
+  const legend=R.parts.some(p=>r.parts[p.key]&&r.parts[p.key].checks&&r.parts[p.key].checks.length)?'<p class="small muted">○ 채웠어요 · △ 일부만 보였어요 · ✕ 빠졌거나 기준에 못 미쳤어요</p>':'';
+  return`<div class="card"><h2>내 점수와 그 이유</h2>${legend}${R.unrelated?`<p class="notice ok">${esc(R.unrelated)}</p>`:''}</div>`+parts;
+}
+$('#rsFile').onchange=async e=>{
+  const f=e.target.files[0];if(!f||!S)return;
+  try{S.reason=parseReason(await f.text());autoMap();await save(true);renderReason();toast('이유 자료를 올렸습니다');}
+  catch(err){msg($('#rsInfo'),'이유 자료를 읽지 못했습니다. ('+esc(err.message)+')','err');}
+  e.target.value='';
+};
+$('#rsRemove').onclick=async()=>{const b=$('#rsRemove');if(b.dataset.sure!=='1'){b.dataset.sure='1';b.textContent='정말 빼기';return;}
+  b.dataset.sure='';b.textContent='이유 자료 빼기';S.reason=null;S.map=null;await save(true);renderReason();renderStudents();};
+document.addEventListener('change',e=>{const t=e.target;if(!S||!t.dataset)return;if(t.dataset.map!=null){S.map=S.map||[];S.map[+t.dataset.map]=t.value;save();renderCheck();}else if(t.dataset.st!=null&&S.reason){renderCheck();}});
+$('#sgAsk').onclick=()=>{$('#askBox').hidden=false;$('#askText').value='';setTimeout(()=>$('#askText').focus(),50);};
+$('#askCancel').onclick=()=>{$('#askBox').hidden=true;};
+$('#askOk').onclick=async()=>{const L=logOf(current);L.asks.push({at:Date.now(),text:$('#askText').value.trim()});if(!await save(true)){L.asks.pop();$('#sgErr').hidden=false;return;}current=null;toast('질문을 남겼습니다. 선생님이 다시 불러 줄 거예요');openList();};
+const csvCell=v=>{let t=String(v??'');if(/^[=+\-@\t\r]/.test(t))t="'"+t;return/[",\n]/.test(t)?'"'+t.replace(/"/g,'""')+'"':t;};
+$('#btnLog').onclick=()=>{
+  const head=['번호','이름',...S.items.map(it=>it.name),'점수 맞춤','다른 까닭','이유 처음 본 시각','서명','서명 시각','질문 횟수','질문 시각','질문 내용','서명 뒤 점수 바뀜'];
+  const rows=S.students.map(st=>{const c=checkStudent(st);const L=(S.log||{})[st.id]||{views:[],signs:[],asks:[]};
+    return[st.no,st.name,...st.scores,c.state==='none'?'이유 자료 없음':c.state==='ok'?'맞음':'다름',c.why||'',fmtTime(L.views[0]),S.sigs[st.id]?'완료':'없음',fmtTime(L.signs[L.signs.length-1]),L.asks.length,L.asks.map(a=>fmtTime(a.at)).join(' / '),L.asks.map(a=>a.text).filter(Boolean).join(' / '),changedAfterSign(st)?'예':''];});
+  const csv='﻿'+[head,...rows].map(r=>r.map(csvCell).join(',')).join('\r\n');
+  const url=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+  const a=document.createElement('a');a.href=url;a.download=(S.title||S.fileName.replace(/\.pdf$/i,''))+'_확인기록.csv';document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),60000);{const ch=S.students.filter(changedAfterSign);$('#exportMsg').textContent='확인 기록을 내려받았습니다.'+(ch.length?` 서명한 뒤 점수가 바뀐 학생 ${ch.length}명: ${ch.map(x=>noLabel(x.no)+x.name).join(', ')}. 확인해 주세요.`:'');}
+};
+$('#btnWipe').onclick=()=>gated(wipeAll);
+async function wipeAll(){const b=$('#btnWipe');if(b.dataset.sure!=='1'){b.dataset.sure='1';b.textContent='정말 모두 지우기';b.classList.add('seal-btn');return;}
+  if(DB.db){DB.db.close();DB.db=null;}
+  const wiped=await new Promise(res=>{const r=indexedDB.deleteDatabase('suhaeng-reason');r.onsuccess=()=>res(true);r.onerror=r.onblocked=()=>res(false);});
+  b.dataset.sure='';b.textContent='이 기기의 자료 모두 지우기';b.classList.remove('seal-btn');
+  if(!wiped){$('#wipeMsg').textContent='지우지 못했습니다. 이 앱을 연 다른 창을 닫고 다시 해 주세요.';return;}
+  S=null;lockRec=null;$('#wipeMsg').textContent='모두 지웠습니다.';renderSaved();}
+if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}
+
+/* ---------- 내보내기 ---------- */
+function updateExportInfo(){
+  if(!S)return;
+  const miss=S.students.filter(s=>!S.sigs[s.id]),stale=S.students.filter(changedAfterSign);const el=$('#exportInfo');
+  const t=[];
+  if(miss.length){
+    const asked=miss.filter(s=>S.log&&S.log[s.id]&&S.log[s.id].asks.length),bad=miss.filter(s=>checkStudent(s).state==='bad');
+    t.push(`서명하지 않은 학생 ${miss.length}명: `+miss.map(s=>noLabel(s.no)+s.name).join(', ')+(asked.length?` · 그 가운데 질문을 남긴 학생 ${asked.length}명`:'')+(bad.length?` · 점수 자료가 맞지 않는 학생 ${bad.length}명`:'')+'. 결석 글자는 이유 화면을 한 번도 열지 않은 학생에게만 들어갑니다.');
+  }
+  if(stale.length)t.push(`서명한 뒤 점수나 이유 자료가 바뀐 학생 ${stale.length}명: `+stale.map(s=>noLabel(s.no)+s.name).join(', ')+'. 다시 확인해 주세요.');
+  el.hidden=!t.length;el.textContent=t.join(' ');
+}
+function loadImg(src){return new Promise((res,rej)=>{const i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=src;});}
+// 서명을 W×H 칸에 맞춰 그리고, 줄어들어 가늘어진 선을 진한 검정으로 굵게 만든다
+async function boldSig(src,W,H){
+  W=Math.max(4,Math.round(W));H=Math.max(4,Math.round(H));
+  const img=await loadImg(src);
+  const s=Math.min(W/img.width,H/img.height);const w=img.width*s,h=img.height*s;
+  const t=document.createElement('canvas');t.width=W;t.height=H;const tg=t.getContext('2d');
+  tg.drawImage(img,(W-w)/2,(H-h)/2,w,h);
+  const d=tg.getImageData(0,0,W,H),a=d.data;
+  for(let i=0;i<a.length;i+=4){const al=a[i+3];a[i]=a[i+1]=a[i+2]=0;a[i+3]=al<10?0:Math.min(255,al*3);}
+  tg.putImageData(d,0,0);
+  const cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');
+  const r=Math.max(1,Math.round(Math.min(W,H)*0.0175));
+  for(let dx=-r;dx<=r;dx++)for(let dy=-r;dy<=r;dy++){if(dx*dx+dy*dy<=r*r+0.5)g.drawImage(t,dx,dy);}
+  return cv;
+}
+const boldCache={};
+async function boldPreviews(){
+  for(const im of document.querySelectorAll('#pvBoxes img[data-sid]')){
+    const box=im.parentElement;const W=box.clientWidth*2,H=box.clientHeight*2;if(W<4||H<4)continue;
+    const key=im.dataset.sid+'|'+Math.round(W)+'x'+Math.round(H)+'|'+S.sigs[im.dataset.sid].length;
+    try{if(!boldCache[key])boldCache[key]=(await boldSig(S.sigs[im.dataset.sid],W,H)).toDataURL('image/png');im.src=boldCache[key];}catch(e){}
+  }
+}
+async function boxImage(st,b,kind,text){
+  const K=5,cv=document.createElement('canvas');cv.width=Math.max(4,Math.round((b.x1-b.x0)*K));cv.height=Math.max(4,Math.round((b.y1-b.y0)*K));
+  const g=cv.getContext('2d');
+  if(kind==='sig'){g.drawImage(await boldSig(S.sigs[st.id],cv.width,cv.height),0,0);}
+  else{let fs=cv.height*0.62;const f=()=>`${fs}px "IBM Plex Sans KR","Malgun Gothic",sans-serif`;g.font=f();
+    while(g.measureText(text).width>cv.width*0.94&&fs>6){fs-=1;g.font=f();}
+    g.fillStyle='#000';g.textAlign='center';g.textBaseline='middle';g.fillText(text,cv.width/2,cv.height/2);}
+  return cv;
+}
+function rotateCanvas(cv,deg){
+  deg=((deg%360)+360)%360;if(!deg)return cv;
+  const r=document.createElement('canvas');const sw=deg===90||deg===270;r.width=sw?cv.height:cv.width;r.height=sw?cv.width:cv.height;
+  const g=r.getContext('2d');g.translate(r.width/2,r.height/2);g.rotate(-deg*Math.PI/180);g.drawImage(cv,-cv.width/2,-cv.height/2);return r;
+}
+$('#btnExport').onclick=async()=>{
+  const out=$('#exportMsg');out.textContent='PDF를 만드는 중입니다…';$('#btnExport').disabled=true;
+  const small=[];
+  try{
+    const doc=await PDFLib.PDFDocument.load(new Uint8Array(S.bytes.slice(0)),{updateMetadata:false});
+    const skip=(S.skipText||'').trim();
+    for(const st of S.students){
+      const L=(S.log||{})[st.id];const seen=L&&(L.views.length||L.asks.length);const kind=S.sigs[st.id]?'sig':(skip&&!seen&&checkStudent(st).state!=='bad'?'text':null);if(!kind)continue;
+      const pjs=await pdfDoc.getPage(st.page+1);const vp=pjs.getViewport({scale:1});
+      const b=boxOf(st);if(b.x1-b.x0<2||b.y1-b.y0<2){small.push(noLabel(st.no)+st.name);continue;}
+      const p1=vp.convertToPdfPoint(b.x0,b.y0),p2=vp.convertToPdfPoint(b.x1,b.y1);
+      const x=Math.min(p1[0],p2[0]),y=Math.min(p1[1],p2[1]),w=Math.abs(p1[0]-p2[0]),h=Math.abs(p1[1]-p2[1]);
+      const cv=rotateCanvas(await boxImage(st,b,kind,skip),vp.rotation);
+      const png=await doc.embedPng(cv.toDataURL('image/png'));
+      doc.getPage(st.page).drawImage(png,{x,y,width:w,height:h});
+    }
+    const bytes=await doc.save();
+    const blob=new Blob([bytes],{type:'application/pdf'});const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');a.href=url;a.download=(S.title||S.fileName.replace(/\.pdf$/i,''))+'_서명.pdf';document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+    const ch=S.students.filter(changedAfterSign);
+    out.textContent='다운로드했습니다.'+(small.length?` 서명 칸이 너무 작아 넣지 못한 학생 ${small.length}명: ${small.join(', ')}.`:'')+(ch.length?` 서명한 뒤 점수가 바뀐 학생 ${ch.length}명: ${ch.map(x=>noLabel(x.no)+x.name).join(', ')}. 확인해 주세요.`:'');
+  }catch(e){console.error(e);out.textContent='실패: '+e.message;}
+  finally{$('#btnExport').disabled=false;}
+};
+
+/* ---------- 시작 ---------- */
+const drop=$('#drop');
+$('#file').onchange=e=>{const f=e.target.files[0];if(f)gated(()=>loadFile(f));};
+['dragenter','dragover'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.add('over');}));
+['dragleave','drop'].forEach(t=>drop.addEventListener(t,e=>{e.preventDefault();drop.classList.remove('over');}));
+drop.addEventListener('drop',e=>{const f=e.dataTransfer.files[0];if(f)gated(()=>loadFile(f));});
+async function renderSaved(){
+  const list=((await DB.get('list'))||[]).sort((a,b)=>b.updated-a.updated);
+  $('#saved').hidden=!list.length;
+  $('#savedList').innerHTML=list.map(e=>`<div class="row between notice ${e.done>=e.total&&e.total?'ok':'warn'}" style="color:var(--fg)">
+    <span style="min-width:0;overflow-wrap:anywhere"><strong>${esc(e.title)}</strong><br><span class="small muted">서명 ${e.done} / ${e.total}명${e.done>=e.total&&e.total?' · 완료':''}</span></span>
+    <span class="row"><button class="primary" data-open="${esc(e.id)}">이어서 하기</button><button class="ghost" data-rm="${esc(e.id)}">지우기</button></span></div>`).join('');
+}
+$('#savedList').onclick=e=>{
+  const o=e.target.closest('[data-open]'),r=e.target.closest('[data-rm]');
+  if(o)gated(async()=>{const st=await DB.get('sess:'+o.dataset.open);if(!st){msg($('#startMsg'),'저장된 일람표를 찾지 못했습니다.','err');return;}
+    S=st;S.adj=S.adj||{l:0,r:0,dy:0,pad:2};S.log=S.log||{};S.snap=S.snap||{};await openPdf(S.bytes);openReview();});
+  if(r){if(r.dataset.sure!=='1'){r.dataset.sure='1';r.textContent='정말 지우기';r.classList.add('seal-btn');return;}
+    gated(async()=>{const id=r.dataset.rm;await DB.del('sess:'+id);const list=((await DB.get('list'))||[]).filter(x=>x.id!==id);await DB.set('list',list);renderSaved();});}
+};
+if(/KAKAOTALK/i.test(navigator.userAgent))$("#kakao").hidden=false;
+(async()=>{
+  let lk;
+  try{
+    lk=await DB.get('lock');
+    if(!lk&&ls.get('sr-lock'))lk=await DB.get('lock'); // 한 번 더 읽어 본다
+    if(lk){
+      const st=await DB.get('sess:'+lk.id);
+      if(!st||!st.bytes){await DB.del('lock');ls.del('sr-lock');lk=null;}
+      else{lockRec=lk;S=st;S.adj=S.adj||{l:0,r:0,dy:0,pad:2};S.log=S.log||{};S.snap=S.snap||{};await openPdf(S.bytes);openList();return;}
+    }
+  }catch(e){console.error(e);if(lk)lockRec=lk;S=null;}
+  if(!lockRec&&!lk){try{const b=JSON.parse(ls.get('sr-lock')||'null');if(b&&b.hash&&b.salt)lockRec=b;}catch(e){}} // 저장소를 못 읽어도 잠김은 지킨다
+  show('scr-start');renderSaved();
+})();
+</script>
+</body>
+</html>
