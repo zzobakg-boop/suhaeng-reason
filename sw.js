@@ -1,5 +1,5 @@
 // 한 번 열어 둔 뒤에는 인터넷 없이도 열리게 한다. 학생 자료는 여기 담지 않는다(프로그램 파일만).
-const C='suhaeng-reason-v4';
+const C='suhaeng-reason-v5';
 const FILES=['./','./index.html','./vendor/pdf.min.js','./vendor/pdf.worker.min.js','./vendor/pdf-lib.min.js','./manifest.webmanifest','./icon-180.png','./icon-512.png'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(FILES)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});

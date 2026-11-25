@@ -117,6 +117,8 @@ details summary{cursor:pointer;font-weight:600}
 .next{border-left:4px solid var(--ink);padding:4px 0 4px 12px}
 .next ul{margin:4px 0 0;padding-left:1.1em}
 .tnote{color:var(--ink);font-weight:600}
+.pfwrap{overflow-x:auto}.pft{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}.pft th,.pft td{border-bottom:1px solid var(--line);padding:6px 8px;text-align:left}.pft tr.me td{background:var(--bg);font-weight:700}
+.pfh{font-size:1rem;margin:14px 0 6px}.pfl{list-style:none;margin:0;padding:0}.pfl li{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid var(--line)}.pfl li.miss .pfw{color:var(--seal)}.pfw{white-space:nowrap}.pfnotes{padding-left:18px}
 textarea{font:inherit;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%;min-height:90px}
 .tag{font-size:.8rem;border-radius:999px;padding:1px 8px;white-space:nowrap}
 .tag.ok{background:var(--ok-soft);color:var(--ok)} .tag.bad{background:var(--seal-soft);color:var(--seal)} .tag.ask{background:var(--warn-soft);color:var(--warn)}
@@ -810,12 +812,13 @@ function parseReason(txt){
   if(d.kind!=='suhaeng-reason'||!Array.isArray(d.parts)||!Array.isArray(d.students))throw new Error('이유 자료 파일 형식이 아닙니다.');
   return d;
 }
-function partOptions(){const R=S.reason;const o=[['','맞춰 보지 않음']];if(R.parts.length>1)o.push(['total',`합계 (${R.totalMax}점)`]);for(const p of R.parts)o.push([p.key,`${p.title} (${p.max}점)`]);return o;}
+function partOptions(){const R=S.reason;const o=[['','맞춰 보지 않음']];if(R.portfolio)o.push(['pf',`${R.portfolio.title} (${R.portfolio.max}점)`]);if(R.parts.length>1)o.push(['total',`합계 (${R.totalMax}점)`]);for(const p of R.parts)o.push([p.key,`${p.title} (${p.max}점)`]);return o;}
 function autoMap(){
   const R=S.reason;
   const maxOf=it=>parseFloat(it.max);
   S.map=S.items.map((it,i)=>{
     const nm=norm(it.name);
+    if(R.portfolio&&(R.portfolio.match||[]).some(w=>nm.includes(norm(w))))return 'pf';
     const hit=R.parts.find(p=>(p.match||[]).some(w=>nm.includes(norm(w))));
     if(hit)return hit.key;
     if(isTotalName(it.name))return '';
@@ -836,20 +839,23 @@ function checkStudent(st){
   if(r.name&&norm(r.name)!==norm(st.name))return{state:'bad',why:`이름이 다릅니다(이유 자료: ${r.name})`};
   const map=S.map||[];
   if(!map.some(Boolean))return{state:'bad',why:'맞춰 볼 일람표 칸이 정해지지 않았습니다'};
-  const probs=[];
+  const probs=[];let compared=0;
   S.items.forEach((it,i)=>{const k=map[i];if(!k)return;
-    const want=k==='total'?r.total:(r.parts[k]?r.parts[k].score:null);
+    if(r.noWriting&&k!=='pf')return;   // 서술형 기록이 없는 학생: 서술 칸은 나이스 점수만 보이고 맞춰 보지 않는다
+    compared++;
+    const want=k==='pf'?(r.pf?r.pf.score:null):k==='total'?r.total:(r.parts[k]?r.parts[k].score:null);
     const txt=String(st.scores[i]??'').replace(/(\d),(\d)/g,'$1.$2').replace(/[^\d.]/g,'');
     const got=/^\d+(\.\d+)?$/.test(txt)?parseFloat(txt):NaN;
     if(isNaN(got))probs.push(`${it.name}: 일람표 점수를 읽지 못함(${st.scores[i]||'빈칸'})`);
     else if(want==null||Math.abs(got-want)>0.001)probs.push(`${it.name}: 일람표 ${st.scores[i]||'빈칸'}, 이유 자료 ${want??'없음'}`);});
+  if(!compared)probs.push('맞춰 본 칸이 없습니다');
   return probs.length?{state:'bad',why:probs.join(' · ')}:{state:'ok',r};
 }
 function dataTag(st){const c=checkStudent(st);if(c.state==='none')return'<span class="muted">-</span>';return c.state==='ok'?'<span class="tag ok">맞음</span>':`<span class="tag bad" title="${esc(c.why)}">다름</span>`;}
 function askTag(st){const L=S.log&&S.log[st.id];return L&&L.asks.length?`<span class="tag ask">${L.asks.length}번</span>`:'<span class="muted">-</span>';}
 function snapOf(st){
   const r=reasonRow(st);
-  return{sc:st.scores.map(v=>String(v??'').trim()),rs:r?{t:r.total,p:Object.fromEntries(Object.entries(r.parts||{}).map(([k,v])=>[k,v&&v.score]))}:null};
+  return{sc:st.scores.map(v=>String(v??'').trim()),rs:r?{t:r.total,p:Object.fromEntries(Object.entries(r.parts||{}).map(([k,v])=>[k,v&&v.score])),...(r.pf?{f:r.pf.score}:{})}:null};
 }
 function changedAfterSign(st){const sn=(S.snap||{})[st.id];return!!(sn&&S.sigs[st.id]&&JSON.stringify(sn)!==JSON.stringify(snapOf(st)));}
 function renderReason(){
@@ -876,6 +882,22 @@ function renderCheck(){
   $('#rsCheck').innerHTML=h;
   if($('#stBody'))renderStudents();
 }
+function pfHTML(r){
+  const P=S.reason.portfolio,x=r.pf;if(!P||!x)return'';
+  let h=`<div class="card rpart"><div class="row between"><h2>${esc(P.title)}</h2><span class="val">${esc(fmtNum(x.score))} <small>/ ${esc(P.max)}</small></span></div>`;
+  if(x.talk)h+=`<p class="lvl">${esc(x.line)}</p>`;
+  else if(x.transfer)h+=`<p class="lvl">${esc(x.note)}</p>`;
+  else h+=`<p class="lvl">학습지 ${esc(x.of)}편 가운데 <strong>${esc(x.submitted)}편</strong>을 냈어요.${x.note?' '+esc(x.note):''}</p>`;
+  if(!x.transfer){
+    h+=`<p class="small">${esc(P.rule)}</p><div class="pfwrap"><table class="pft"><thead><tr><th>낸 학습지</th><th>더하는 점수</th><th>총점</th></tr></thead><tbody>${P.bands.map(b=>`<tr${!x.talk&&b[2]===x.score?' class="me"':''}><td>${esc(b[0])}</td><td>${esc(b[1])}</td><td>${esc(b[2])}</td></tr>`).join('')}</tbody></table></div>`;
+    h+=`<ul class="small pfnotes">${P.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>`;
+  }
+  if(x.items&&x.items.length){
+    h+=`<h3 class="pfh">내 학습지 ${esc(x.items.length)}편</h3><ul class="pfl">${x.items.map(i=>`<li class="${i.status==='냄'?'':'miss'}"><span>${esc(i.lesson)} ${esc(i.title)}</span><span class="pfw">${i.status==='냄'?esc(/^\d/.test(i.when)?'낸 날 '+i.when:(i.when||'냄')):'<strong>안 냄</strong>'}</span></li>`).join('')}</ul><p class="small muted">${esc(P.missNote)}</p>`;
+    h+=`<div class="next"><strong>확인해 주세요</strong><p>${esc(P.ask)}</p></div>`;
+  }
+  return h+'</div>';
+}
 function reasonHTML(r){
   const R=S.reason;
   const parts=R.parts.map(p=>{const x=r.parts[p.key];if(!x)return'';
@@ -886,7 +908,10 @@ function reasonHTML(r){
     ${x.next&&x.next.length?`<div class="next"><strong>다음에는</strong><ul>${x.next.map(n=>`<li>${esc(n)}</li>`).join('')}</ul></div>`:''}
     ${x.note?`<p class="tnote">선생님 한마디: ${esc(x.note)}</p>`:''}</div>`;}).join('');
   const legend=R.parts.some(p=>r.parts[p.key]&&r.parts[p.key].checks&&r.parts[p.key].checks.length)?'<p class="small muted">○ 채웠어요 · △ 일부만 보였어요 · ✕ 빠졌거나 기준에 못 미쳤어요</p>':'';
-  return`<div class="card"><h2>내 점수와 그 이유</h2>${legend}${R.unrelated?`<p class="notice ok">${esc(R.unrelated)}</p>`:''}</div>`+parts;
+  const nw=r.noWriting&&R.portfolio?`<div class="card"><p class="lvl">${esc(R.portfolio.noWriting)}</p></div>`:'';
+  const head=`${legend}${R.unrelated&&!r.noWriting?`<p class="notice ok">${esc(R.unrelated)}</p>`:''}`;
+  if(R.portfolio&&r.pf)return`<div class="card"><h2>내 점수와 그 이유</h2></div>`+pfHTML(r)+nw+(head&&parts?`<div class="card">${head}</div>`:'')+parts;
+  return`<div class="card"><h2>내 점수와 그 이유</h2>${head}</div>`+nw+parts;
 }
 $('#rsFile').onchange=async e=>{
   const f=e.target.files[0];if(!f||!S)return;
