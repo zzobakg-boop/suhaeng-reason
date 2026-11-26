@@ -841,7 +841,7 @@ function checkStudent(st){
   if(!map.some(Boolean))return{state:'bad',why:'맞춰 볼 일람표 칸이 정해지지 않았습니다'};
   const probs=[];let compared=0;
   S.items.forEach((it,i)=>{const k=map[i];if(!k)return;
-    if(r.noWriting&&k!=='pf')return;   // 서술형 기록이 없는 학생: 서술 칸은 나이스 점수만 보이고 맞춰 보지 않는다
+    if(r.noWriting&&k!=='pf'&&!(r.absentZero&&k==='total'))return;   // 서술형 기록이 없는 학생: 서술 칸은 맞춰 보지 않는다. 미응시 0점 확정이면 서술 합계 0만 맞춰 본다
     compared++;
     const want=k==='pf'?(r.pf?r.pf.score:null):k==='total'?r.total:(r.parts[k]?r.parts[k].score:null);
     const txt=String(st.scores[i]??'').replace(/(\d),(\d)/g,'$1.$2').replace(/[^\d.]/g,'');
@@ -889,7 +889,7 @@ function pfHTML(r){
   else if(x.transfer)h+=`<p class="lvl">${esc(x.note)}</p>`;
   else h+=`<p class="lvl">학습지 ${esc(x.of)}편 가운데 <strong>${esc(x.submitted)}편</strong>을 냈어요.${x.note?' '+esc(x.note):''}</p>`;
   if(!x.transfer){
-    h+=`<p class="small">${esc(P.rule)}</p><div class="pfwrap"><table class="pft"><thead><tr><th>낸 학습지</th><th>더하는 점수</th><th>총점</th></tr></thead><tbody>${P.bands.map(b=>`<tr${!x.talk&&b[2]===x.score?' class="me"':''}><td>${esc(b[0])}</td><td>${esc(b[1])}</td><td>${esc(b[2])}</td></tr>`).join('')}</tbody></table></div>`;
+    h+=`<p class="small">${esc(P.rule)}</p><div class="pfwrap"><table class="pft"><thead><tr><th>낸 학습지</th><th>더하는 점수</th><th>총점</th></tr></thead><tbody>${((P.bandsByOf&&P.bandsByOf[x.of])||P.bands||[]).map(b=>`<tr${!x.talk&&b[2]===x.score?' class="me"':''}><td>${esc(b[0])}</td><td>${esc(b[1])}</td><td>${esc(b[2])}</td></tr>`).join('')}</tbody></table></div>`;
     h+=`<ul class="small pfnotes">${P.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul>`;
   }
   if(x.items&&x.items.length){
@@ -908,7 +908,8 @@ function reasonHTML(r){
     ${x.next&&x.next.length?`<div class="next"><strong>다음에는</strong><ul>${x.next.map(n=>`<li>${esc(n)}</li>`).join('')}</ul></div>`:''}
     ${x.note?`<p class="tnote">선생님 한마디: ${esc(x.note)}</p>`:''}</div>`;}).join('');
   const legend=R.parts.some(p=>r.parts[p.key]&&r.parts[p.key].checks&&r.parts[p.key].checks.length)?'<p class="small muted">○ 채웠어요 · △ 일부만 보였어요 · ✕ 빠졌거나 기준에 못 미쳤어요</p>':'';
-  const nw=r.noWriting&&R.portfolio?`<div class="card"><p class="lvl">${esc(R.portfolio.noWriting)}</p></div>`:'';
+  const nwText=r.absentZero&&R.portfolio&&R.portfolio.absentZero?R.portfolio.absentZero:(R.portfolio&&R.portfolio.noWriting);
+  const nw=r.noWriting&&nwText?`<div class="card"><p class="lvl">${esc(nwText)}</p></div>`:'';
   const head=`${legend}${R.unrelated&&!r.noWriting?`<p class="notice ok">${esc(R.unrelated)}</p>`:''}`;
   if(R.portfolio&&r.pf)return`<div class="card"><h2>내 점수와 그 이유</h2></div>`+pfHTML(r)+nw+(head&&parts?`<div class="card">${head}</div>`:'')+parts;
   return`<div class="card"><h2>내 점수와 그 이유</h2>${head}</div>`+nw+parts;
