@@ -909,8 +909,9 @@ function reasonHTML(r){
     ${x.note?`<p class="tnote">선생님 한마디: ${esc(x.note)}</p>`:''}</div>`;}).join('');
   const legend=R.parts.some(p=>r.parts[p.key]&&r.parts[p.key].checks&&r.parts[p.key].checks.length)?'<p class="small muted">○ 채웠어요 · △ 일부만 보였어요 · ✕ 빠졌거나 기준에 못 미쳤어요</p>':'';
   const nwText=r.absentZero&&R.portfolio&&R.portfolio.absentZero?R.portfolio.absentZero:(R.portfolio&&R.portfolio.noWriting);
-  const nw=r.noWriting&&nwText?`<div class="card"><p class="lvl">${esc(nwText)}</p></div>`:'';
-  const head=`${legend}${R.unrelated&&!r.noWriting?`<p class="notice ok">${esc(R.unrelated)}</p>`:''}`;
+  // 교사가 정한 점수(응시 조건, 11/27): 서술 칸은 점수만, 표시·관계없어요 안내 대신 한 줄
+  const nw=r.teacherSet&&R.teacherSet?`<div class="card"><p class="lvl">${esc(R.teacherSet)}</p></div>`:(r.noWriting&&nwText?`<div class="card"><p class="lvl">${esc(nwText)}</p></div>`:'');
+  const head=`${legend}${R.unrelated&&!r.noWriting&&!r.teacherSet?`<p class="notice ok">${esc(R.unrelated)}</p>`:''}`;
   if(R.portfolio&&r.pf)return`<div class="card"><h2>내 점수와 그 이유</h2></div>`+pfHTML(r)+nw+(head&&parts?`<div class="card">${head}</div>`:'')+parts;
   return`<div class="card"><h2>내 점수와 그 이유</h2>${head}</div>`+nw+parts;
 }
